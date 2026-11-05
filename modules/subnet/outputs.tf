@@ -1,5 +1,3 @@
-# Внутри modules/subnets/outputs.tf
-
 output "public_subnet_id_a" {
   value = aws_subnet.public_subnet_a.id
 }

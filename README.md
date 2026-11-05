@@ -1,74 +1,58 @@
-<img src="https://img.shields.io/badge/AWS%20-%23FF9900.svg?&style=for-the-badge&logo=amazon-aws&logoColor=white"/> <img src="https://img.shields.io/badge/terraform%20-%235835CC.svg?&style=for-the-badge&logo=terraform&logoColor=white"/>
-# TerraVPC: A Terraform Journey into AWS Infrastructure
+# TerraVPC
 
-## Welcome to TerraVPC!
+![Terraform CI](https://github.com/mvulcu/terraVPC/actions/workflows/terraform.yml/badge.svg)
 
-Hey there! 👋 Welcome to **TerraVPC**, a project born out of pure passion, curiosity, and the drive to turn ideas into reality using the power of technology. As a final-year student deeply fascinated by the cloud and its endless possibilities, I embarked on this journey to practice, explore, and manifest my understanding of cloud infrastructure through code.
+Modular Terraform configuration for a two-AZ AWS VPC with public and private subnets, an internet gateway, a NAT gateway, route tables and a baseline security group.
 
-### 🌟 Introduction
+## Architecture
 
-In the modern cloud era, Infrastructure as Code (IaC) has revolutionized how we provision and manage IT infrastructure. TerraVPC is a hands-on exploration into the vast expanse of AWS, leveraging Terraform, the orchestrator of clouds, to script out an entire virtual private cloud from scratch.
+```text
+VPC 10.0.0.0/16  (eu-north-1)
+├── Public subnet A  10.0.1.0/24  (eu-north-1a) ── NAT gateway (EIP)
+├── Public subnet B  10.0.2.0/24  (eu-north-1b)
+├── Private subnet A 10.0.3.0/24  (eu-north-1a)
+├── Private subnet B 10.0.4.0/24  (eu-north-1b)
+├── Internet gateway  → public route table  (0.0.0.0/0)
+├── NAT gateway       → private route tables A and B (0.0.0.0/0)
+└── Security group: HTTP 80 inbound, all outbound
+```
 
-### 🏗 What's Inside TerraVPC?
+## Modules
 
-This project is a testament to the power of IaC, encapsulating a fully-fledged VPC setup on AWS. It includes:
+| Module | Resources |
+|---|---|
+| `modules/vpc` | `aws_vpc` |
+| `modules/subnet` | Public and private `aws_subnet` across two AZs |
+| `modules/igw` | `aws_internet_gateway` |
+| `modules/nat_gateway` | `aws_eip`, `aws_nat_gateway` |
+| `modules/route_table` | Public and private `aws_route_table` and associations |
+| `modules/security_group` | `aws_security_group` |
 
-- **A Custom VPC (Virtual Private Cloud):** A foundational block that provides a private, isolated section of the AWS cloud, where you can launch resources within a defined virtual network.
-  
-- **Subnetting:** Both public and private subnets spread across two availability zones, ensuring high availability and fault tolerance.
-  
-- **Internet Gateway (IGW):** A gateway attached to the VPC, allowing communication between instances in the VPC and the internet.
-  
-- **NAT Gateways:** These enable instances in a private subnet to connect to the internet or other AWS services while preventing the internet from initiating a connection with those instances.
-  
-- **Route Tables:** Configured to direct traffic from the subnets to the internet via the IGW and to manage internal communication within the VPC.
-  
-- **Security Groups:** Acting as a virtual firewall to control inbound and outbound traffic to AWS resources and applications.
+Modules are wired together in `main.tf` through their outputs (VPC ID, subnet IDs, gateway IDs).
 
-### 🚀 Key Achievements
+## Usage
 
-- **Hands-On AWS Experience:** Building and scripting a complete VPC setup from scratch.
-  
-- **Automation Mastery:** Demonstrating the efficiency of Terraform to automate the provisioning of a multi-component AWS infrastructure.
-  
-- **High Availability Configuration:** Ensuring robustness and failover strategies by employing multiple availability zones.
-  
-- **Security:** Implementing security best practices by creating and managing Security Groups.
-  
-- **Scalability & Modularity:** Using Terraform modules to make the infrastructure easily scalable and maintainable.
-
-### 💡 The Vision and the Value
-
-This project is not just a collection of Terraform scripts; it's a narrative of growth, learning, and the manifestation of infrastructure at the fingertips. The capabilities honed here lay the groundwork for deploying real-world applications that are secure, scalable, and resilient.
-
-### 🔑 Key Takeaways
-
-- **Practical Cloud Proficiency:** Gaining hands-on experience that translates into real-world skill sets.
-  
-- **IaC Best Practices:** Learning the ins and outs of Terraform to manage and provision resources effectively.
-  
-- **Cloud Architecture Understanding:** Deepening knowledge of networking and cloud architecture best practices.
-
-### 📘 How to Use This Project?
-
-Feel free to clone the repository, explore the code, and use Terraform to deploy your own VPC. Make sure to have Terraform and AWS CLI installed and configured on your machine.
+Requirements: Terraform ≥ 1.5 and AWS credentials configured locally.
 
 ```bash
-git clone [repository URL]
-cd TerraVPC
 terraform init
 terraform plan
 terraform apply
 ```
 
-### 🙌 Join the Journey
+Note that the NAT gateway and Elastic IP are billed by AWS while they exist. Run `terraform destroy` when you are done.
 
-Whether you're a fellow student, a tech enthusiast, or a seasoned professional, I invite you to delve into TerraVPC, tinker with it, expand upon it, and embark on your own cloud adventure. Let's navigate the skies of AWS together!
+## CI
 
----
+GitHub Actions runs static checks on every push and pull request, without cloud credentials and without plan or apply:
 
-Your interest, feedback, and contributions are what make the open-source community an ever-evolving ecosystem. Feel the excitement of innovation and the thrill of technology with each line of code. Enjoy TerraVPC! ✨
+- `terraform fmt -check`
+- `terraform init -backend=false` and `terraform validate`
+- TFLint
 
-Remember, this is just the beginning. The cloud is vast, and the possibilities? Limitless. 🚀
+## Possible improvements
 
-**Happy coding!**
+- Remote state (S3 + DynamoDB locking)
+- One NAT gateway per AZ for full high availability
+- HTTPS (443) and restricted CIDRs in the security group
+- VPC Flow Logs
